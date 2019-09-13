@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Reactjs + Google map api</title>
+  <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="description" content="Web site created using create-react-app" />
+  <link rel="apple-touch-icon" href="logo192.png" />
+  <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+  <!--
+      Notice the use of %PUBLIC_URL% in the tags above.
+      It will be replaced with the URL of the `public` folder during the build.
+      Only files inside the `public` folder can be referenced from the HTML.
+
+      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+      work correctly both with client-side routing and a non-root public URL.
+      Learn how to configure a non-root public URL by running `npm run build`.
+    -->
+  <!-- Bootstrap CSS CDN -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css"
+    integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+  <!-- Scrollbar Custom CSS -->
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.min.css">
+  <!-- Font Awesome JS -->
+  <script defer src="https://use.fontawesome.com/releases/v5.0.13/js/solid.js"
+    integrity="sha384-tzzSw1/Vo+0N5UhStP3bvwWPq+uvzCMfrN1fEFe+xBmv1C/AtVX5K0uZtmcHitFZ"
+    crossorigin="anonymous"></script>
+  <script defer src="https://use.fontawesome.com/releases/v5.0.13/js/fontawesome.js"
+    integrity="sha384-6OIrr52G08NpOFSZdxxz1xdNSndlD4vdcf/q2myIUVO0VsqaGHJsB0RaBE01VTOY"
+    crossorigin="anonymous"></script>
+
+  <!-- jQuery CDN - Slim version (=without AJAX) -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+    crossorigin="anonymous"></script>
+  <!-- Popper.JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js"
+    integrity="sha384-cs/chFZiN24E4KMATLdqdvsezGxaGsi4hLGOzlXwp5UZB1LY//20VyM2taTB4QvJ"
+    crossorigin="anonymous"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js"
+    integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm"
+    crossorigin="anonymous"></script>
+  <!-- jQuery Custom Scroller CDN -->
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.concat.min.js"></script>
+
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=APIKEY&libraries=places&callback=initMap"
+    async defer></script>
+</head>
+
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  <!--
+      This HTML file is a template.
+      If you open it directly in the browser, you will see an empty page.
+
+      You can add webfonts, meta tags, or analytics to this file.
+      The build step will place the bundled scripts into the <body> tag.
+
+      To begin the development, run `npm start` or `yarn start`.
+      To create a production bundle, use `npm run build` or `yarn build`.
+    -->
+  <script>
+    // This example uses the autocomplete feature of the Google Places API.
+    // It allows the user to find all hotels in a given place, within a given
+    // country. It then displays markers for all the hotels returned,
+    // with on-click details for each hotel.
+
+    // This example requires the Places library. Include the libraries=places
+    // parameter when you first load the API. For example:
+    // <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places">
+
+    var map, places, infoWindow;
+    var markers = [];
+    var autocomplete;
+    var MARKER_PATH = 'https://developers.google.com/maps/documentation/javascript/images/marker_green';
+    var hostnameRegexp = new RegExp('^https?://.+?/');
+    var Bangsue = { center: { lat: 13.8281711, lng: 100.5285106 }, zoom: 15 };
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: Bangsue.center,
+        zoom: Bangsue.zoom,
+        mapTypeControl: false,
+        panControl: false,
+        zoomControl: true,
+        streetViewControl: false
+      });
+
+      infoWindow = new google.maps.InfoWindow({
+        content: document.getElementById('info-content')
+      });
+
+      // Create the autocomplete object and associate it with the UI input control.
+      // Restrict the search to the default country, and to place type "cities".
+      autocomplete = new google.maps.places.Autocomplete(
+              /** @type {!HTMLInputElement} */(
+          document.getElementById('autocomplete')), {
+        types: ['(regions)'],
+      });
+      var marker = new google.maps.Marker({
+        position: Bangsue.center,
+        map: map
+      });
+      //Show search area
+      places = new google.maps.places.PlacesService(map);
+      autocomplete.addListener('place_changed', onPlaceChanged);
+    }
+
+    // When the user selects a city, get the place details for the city and
+    // zoom the map in on the city.
+    function onPlaceChanged() {
+      var place = autocomplete.getPlace();
+      if (place.geometry) {
+        map.panTo(place.geometry.location);
+        map.setZoom(15);
+        search();
+      } else {
+        document.getElementById('autocomplete').placeholder = 'พื้นที่ต้องการค้นหา';
+      }
+    }
+
+    // Search for hotels in the selected city, within the viewport of the map.
+    function search() {
+      var search = {
+        bounds: map.getBounds(),
+        types: ['restaurant']
+      };
+
+      places.nearbySearch(search, function (results, status) {
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+          clearResults();
+          clearMarkers();
+          // Create a marker for each hotel found, and
+          // assign a letter of the alphabetic to each marker icon.
+          for (var i = 0; i < results.length; i++) {
+            var markerLetter = String.fromCharCode('A'.charCodeAt(0) + (i % 26));
+            var markerIcon = MARKER_PATH + markerLetter + '.png';
+            // Use marker animation to drop the icons incrementally on the map.
+            markers[i] = new google.maps.Marker({
+              position: results[i].geometry.location,
+              animation: google.maps.Animation.DROP,
+              icon: markerIcon
+            });
+            // If the user clicks a hotel marker, show the details of that hotel
+            // in an info window.
+            markers[i].placeResult = results[i];
+            google.maps.event.addListener(markers[i], 'click', showInfoWindow);
+            setTimeout(dropMarker(i), i * 100);
+            addResult(results[i], i);
+          }
+        }
+      });
+    }
+
+    function clearMarkers() {
+      for (var i = 0; i < markers.length; i++) {
+        if (markers[i]) {
+          markers[i].setMap(null);
+        }
+      }
+      markers = [];
+    }
+
+    function clearResults() {
+      var results = document.getElementById('results');
+      while (results.childNodes[0]) {
+        results.removeChild(results.childNodes[0]);
+      }
+    }
+
+    function dropMarker(i) {
+      return function () {
+        markers[i].setMap(map);
+      };
+    }
+
+    function addResult(result, i) {
+      var results = document.getElementById('results');
+      var markerLetter = String.fromCharCode('A'.charCodeAt(0) + (i % 26));
+      var markerIcon = MARKER_PATH + markerLetter + '.png';
+
+      var tr = document.createElement('tr');
+      tr.style.backgroundColor = (i % 2 === 0 ? '#F0F0F0' : '#FFFFFF');
+      tr.onclick = function () {
+        google.maps.event.trigger(markers[i], 'click');
+      };
+
+      var iconTd = document.createElement('td');
+      var nameTd = document.createElement('td');
+      var icon = document.createElement('img');
+      icon.src = markerIcon;
+      icon.setAttribute('class', 'placeIcon');
+      icon.setAttribute('className', 'placeIcon');
+      var name = document.createTextNode(result.name);
+      iconTd.appendChild(icon);
+      nameTd.appendChild(name);
+      tr.appendChild(iconTd);
+      tr.appendChild(nameTd);
+      results.appendChild(tr);
+    }
+
+    // Get the place details for a hotel. Show the information in an info window,
+    // anchored on the marker for the hotel that the user selected.
+    function showInfoWindow() {
+      var marker = this;
+      places.getDetails({ placeId: marker.placeResult.place_id },
+        function (place, status) {
+          if (status !== google.maps.places.PlacesServiceStatus.OK) {
+            return;
+          }
+          infoWindow.open(map, marker);
+          buildIWContent(place);
+        });
+    }
+
+    // Load the place information into the HTML elements used by the info window.
+    function buildIWContent(place) {
+      document.getElementById('iw-icon').innerHTML = '<img class="hotelIcon" ' +
+        'src="' + place.icon + '"/>';
+      document.getElementById('iw-url').innerHTML = '<b><a href="' + place.url +
+        '">' + place.name + '</a></b>';
+      document.getElementById('iw-address').textContent = place.vicinity;
+
+      if (place.formatted_phone_number) {
+        document.getElementById('iw-phone-row').style.display = '';
+        document.getElementById('iw-phone').textContent =
+          place.formatted_phone_number;
+      } else {
+        document.getElementById('iw-phone-row').style.display = 'none';
+      }
+
+      // Assign a five-star rating to the hotel, using a black star ('&#10029;')
+      // to indicate the rating the hotel has earned, and a white star ('&#10025;')
+      // for the rating points not achieved.
+      if (place.rating) {
+        var ratingHtml = '';
+        for (var i = 0; i < 5; i++) {
+          if (place.rating < (i + 0.5)) {
+            ratingHtml += '&#10025;';
+          } else {
+            ratingHtml += '&#10029;';
+          }
+          document.getElementById('iw-rating-row').style.display = '';
+          document.getElementById('iw-rating').innerHTML = ratingHtml;
+        }
+      } else {
+        document.getElementById('iw-rating-row').style.display = 'none';
+      }
+
+      // The regexp isolates the first part of the URL (domain plus subdomain)
+      // to give a short URL for displaying in the info window.
+      if (place.website) {
+        var fullUrl = place.website;
+        var website = hostnameRegexp.exec(place.website);
+        if (website === null) {
+          website = 'http://' + place.website + '/';
+          fullUrl = website;
+        }
+        document.getElementById('iw-website-row').style.display = '';
+        document.getElementById('iw-website').textContent = website;
+      } else {
+        document.getElementById('iw-website-row').style.display = 'none';
+      }
+    }
+  </script>
+
+</body>
+
+</html>
